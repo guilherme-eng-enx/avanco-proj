@@ -250,8 +250,9 @@ dialog.lb .ctl button{ background:#fff; border:0; padding:6px 14px; cursor:point
    Enquanto planilhaId estiver vazio, a página mostra dados de exemplo.
    ========================================================= */
 const CONFIG = {
-  planilhaId: "1NSfWGI4W0xSjJqYENBe5PW8qJCmV5_kol2d1Mh-BPtM",
-  driveApiKey: "AIzaSyAw7EWCUu013xYwwNaRBORhbo-oz5eyOBw",                         // chave de API do Google (Drive) para listar as pastas de fotos
+  planilhaId: "",
+  driveApiKey: "",
+  github: null,                            // detectado pelo endereço do site; só preencha se precisar: {usuario:"...", repo:"...", branch:"main"}                         // chave de API do Google (Drive) para listar as pastas de fotos
   logo: "logo-enaex.png",                  // arquivo do logo no mesmo repositório
   tolerancia: { atencao: 3, atraso: 10 }   // p.p. abaixo do previsto
 };
@@ -359,7 +360,34 @@ function snap(p,w){
   const real=rs?rs.real:(rb?rb.real:null);
   const dev=(prev!=null&&real!=null)?real-prev:null;
   return {prev,real,dev,orc:lastLE(s,w.d,r=>r.orc!=null)?.orc??null,nota:ref.nota,st:stOf(ref.st,real,dev),
-    adv:ex?ex.adv:[],att:ex?ex.att:[],nxt:ex?ex.nxt:[],fotos:(ex?ex.fotos:[]).concat(driveDaSemana(p,w)),stale:ex?null:lastS.d};
+    adv:ex?ex.adv:[],att:ex?ex.att:[],nxt:ex?ex.nxt:[],fotos:(ex?ex.fotos:[]).concat(GH[w.k+"|"+p.k]||[],driveDaSemana(p,w)),stale:ex?null:lastS.d};
+}
+
+/* ---------- Fotos da pasta fotos/ do GitHub ----------
+   Estrutura: fotos/AAAA-MM-DD/Nome do projeto/arquivo.jpg
+   (também aceita fotos/Nome do projeto/AAAA-MM-DD/arquivo.jpg e datas como 23-10-2026) */
+const GH={};
+function dataPasta(s){ let m=String(s).match(/^(\d{4})[-_.](\d{1,2})[-_.](\d{1,2})$/); if(m) return new Date(+m[1],m[2]-1,+m[3]);
+  m=String(s).match(/^(\d{1,2})[-_.](\d{1,2})[-_.](\d{4})$/); return m?new Date(+m[3],m[2]-1,+m[1]):null; }
+async function carregarGitHub(){
+  let cfg=CONFIG.github;
+  if(!cfg){ const h=location.hostname.match(/^([\w-]+)\.github\.io$/); if(!h) return;
+    cfg={usuario:h[1], repo:location.pathname.split("/").filter(Boolean)[0]||(h[1]+".github.io"), branch:"main"}; }
+  try{
+    const r=await fetch(`https://api.github.com/repos/${cfg.usuario}/${cfg.repo}/git/trees/${cfg.branch||"main"}?recursive=1`);
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const j=await r.json(); const projs=Object.fromEntries(M.projs.map(p=>[p.k,p])); const sem=new Set(M.weeks.map(w=>w.k));
+    (j.tree||[]).forEach(f=>{
+      if(f.type!=="blob"||!/\.(jpe?g|png|webp|gif)$/i.test(f.path)) return;
+      const parts=f.path.split("/"); if(parts[0]!=="fotos"||parts.length<4) return;
+      let d=dataPasta(parts[1]), pk=key(parts[2]); if(!d){ d=dataPasta(parts[2]); pk=key(parts[1]); }
+      if(!d||!projs[pk]) return;
+      const nome=parts[parts.length-1].replace(/\.[^.]+$/,"");
+      (GH[dkey(d)+"|"+pk] ||= []).push({src:parts.map(encodeURIComponent).join("/"), cap:GENERICO.test(nome)?"":nome.replace(/_+/g," ")});
+      if(!sem.has(dkey(d))) console.warn("Pasta de fotos com data sem semana na planilha:",parts[1]);
+    });
+    Object.values(GH).forEach(a=>a.sort((x,y)=>x.src.localeCompare(y.src)));
+  }catch(e){ console.warn("Fotos do GitHub não carregadas:",e.message); }
 }
 
 /* ---------- Fotos das pastas do Drive ---------- */
@@ -551,7 +579,7 @@ document.addEventListener("keydown",e=>{ if(!$("#lb").open)return; if(e.key==="A
 load().then(async ({t,demo})=>{
   M=model(t);
   if(!M.weeks.length){ $("#app").innerHTML=`<p class="loading">Nenhuma semana lançada. Inclua as linhas da semana na aba Semanal.</p>`; return; }
-  await carregarDrive(); readHash(); render();
+  await Promise.all([carregarDrive(),carregarGitHub()]); readHash(); render();
   $("#src").textContent=demo?"Fonte: dados de exemplo":`Fonte: planilha de controle. Carregado em ${new Date().toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})}.`;
 }).catch(e=>{ $("#app").innerHTML=""; notice(`Não foi possível ler a planilha (${e.message}). Confira se ela está compartilhada como "Qualquer pessoa com o link: leitor" e se os nomes das abas não foram alterados.`,true); });
 </script>
