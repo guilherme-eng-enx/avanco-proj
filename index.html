@@ -41,7 +41,21 @@ button{ font:inherit; }
 .meta strong{ color:var(--ink); font-weight:600; margin-left:4px; }
 
 /* Abas de semana e filtro de projeto */
-.weeks{ display:flex; gap:2px; overflow-x:auto; margin-top:12px; border-bottom:1px solid var(--rule); scrollbar-width:thin; }
+.weeks{ display:flex; align-items:flex-end; gap:2px; margin-top:12px; border-bottom:1px solid var(--rule); position:relative; }
+.weeks .hist{ margin-left:auto; position:relative; align-self:center; }
+.weeks .hist-btn{ border:1px solid var(--rule); border-bottom:1px solid var(--rule); padding:6px 12px; font-size:13.5px; color:var(--ink); background:var(--bg); display:flex; align-items:center; gap:8px; }
+.weeks .hist-btn span{ color:var(--muted); }
+.weeks .hist-btn::after{ content:""; border:4px solid transparent; border-top-color:var(--ink); margin-top:4px; }
+.weeks .hist-btn[aria-expanded="true"]{ background:var(--ink); color:#fff; border-color:var(--ink); }
+.weeks .hist-btn[aria-expanded="true"] span{ color:#fff; opacity:.75; }
+.weeks .hist-btn[aria-expanded="true"]::after{ border-top-color:#fff; }
+.hist-panel{ position:absolute; right:0; top:calc(100% + 6px); z-index:20; background:var(--bg); border:1px solid var(--rule); box-shadow:0 8px 24px rgba(20,24,30,.12); width:280px; max-height:360px; overflow-y:auto; padding:6px 0; }
+.hist-panel[hidden]{ display:none; }
+.hist-panel h5{ margin:8px 14px 2px; font-family:var(--head); font-size:13px; font-weight:400; color:var(--muted); text-transform:uppercase; }
+.weeks .hist-panel button{ display:flex; justify-content:space-between; width:100%; border:0; border-left:3px solid transparent; padding:6px 14px 6px 11px; font-size:14px; color:var(--text); }
+.weeks .hist-panel button small{ color:var(--muted); font-size:12.5px; }
+.weeks .hist-panel button:hover{ background:var(--card); }
+.weeks .hist-panel button[aria-current="true"]{ border-left-color:var(--red); font-weight:700; }
 .weeks button{ background:none; border:0; border-bottom:3px solid transparent; padding:8px 14px 7px; cursor:pointer; color:var(--muted); text-align:left; white-space:nowrap; }
 .weeks button b{ display:block; font-family:var(--head); font-size:17px; font-weight:400; color:var(--ink); }
 .weeks button small{ font-size:12px; }
@@ -151,7 +165,7 @@ dialog.lb .ctl button{ background:#fff; border:0; padding:6px 14px; cursor:point
 .loading{ padding:40px 0; color:var(--muted); }
 
 
-/* Projetos gerais */
+/* Outros projetos */
 .tag{ display:inline-block; margin-left:8px; font-size:11px; color:var(--muted); border:1px solid var(--rule); padding:0 6px; vertical-align:2px; }
 .projs button.gen{ margin-left:auto; }
 .projs button.gen span{ color:var(--muted); margin-left:4px; }
@@ -250,7 +264,7 @@ dialog.lb .ctl button{ background:#fff; border:0; padding:6px 14px; cursor:point
    Enquanto planilhaId estiver vazio, a página mostra dados de exemplo.
    ========================================================= */
 const CONFIG = {
-  planilhaId: "1NSfWGI4W0xSjJqYENBe5PW8qJCmV5_kol2d1Mh-BPtM",
+  planilhaId: "",
   driveApiKey: "",
   github: null,                            // detectado pelo endereço do site; só preencha se precisar: {usuario:"...", repo:"...", branch:"main"}                         // chave de API do Google (Drive) para listar as pastas de fotos
   logo: "logo-enaex.png",                  // arquivo do logo no mesmo repositório
@@ -338,7 +352,7 @@ function model(t){
     return {k,id:"p-"+k,nome:r.projeto,resp:r.responsavel,ini:parseDate(r.inicio),fim:parseDate(r.termino),orc:num(r.orcamento),
       su:parseDate(r.start_up),suRaw:r.start_up,suNota:r.nota_do_start_up,
       pasta:((String(r.pasta_de_fotos||"").match(/folders\/([\w-]{10,})/)||String(r.pasta_de_fotos||"").match(/[?&]id=([\w-]{10,})/)||[])[1])||null,
-      geral: tp.startsWith("ger") || (!tp.startsWith("cur") && !base[k])};});
+      geral: tp.startsWith("ger") || tp.startsWith("out") || (!tp.startsWith("cur") && !base[k])};});
   const marcos=by(t["Marcos"].map(r=>({k:key(r.projeto),nome:r.marco,prev:parseDate(r.data_prevista),raw:r.data_prevista,real:parseDate(r.data_realizada)})).filter(r=>r.nome),r=>r.k);
   Object.values(marcos).forEach(a=>a.sort((x,y)=>(x.prev||0)-(y.prev||0)));
   const info={}; t["Semanas"].forEach(r=>{const d=parseDate(r.data_de_corte); if(d) info[dkey(d)]={rev:r.revisao,dest:r.destaque,per:r.periodo};});
@@ -530,7 +544,7 @@ function writeHash(){ history.replaceState(null,"",`#semana=${S.week}&projeto=${
 function summary(list){
   return `<section class="summary"><h2 class="sec-label">Resumo da semana</h2>
     <div class="srow head"><span>Projeto</span><span>Avanço (realizado e marcador do previsto)</span><span class="num">Previsto</span><span class="num">Realizado</span><span class="num">Desvio</span><span>Status</span></div>
-    ${list.map(({p,s})=>`<div class="srow"><span><button type="button" data-p="${p.geral?"gerais":esc(p.k)}" data-go="${esc(p.id)}">${esc(p.nome)}</button>${p.geral?`<span class="tag">Geral</span>`:""}</span>${bar(s)}
+    ${list.map(({p,s})=>`<div class="srow"><span><button type="button" data-p="${p.geral?"gerais":esc(p.k)}" data-go="${esc(p.id)}">${esc(p.nome)}</button>${p.geral?`<span class="tag">Outros</span>`:""}</span>${bar(s)}
       <span class="num c-p">${fP(s.prev)}</span><span class="num c-r"><b>${fP(s.real)}</b></span>
       <span class="num c-d ${s.dev< -0.05?"neg":""}">${fD(s.dev)}</span><span class="c-s">${stHTML(s.st)}</span></div>`).join("")}
   </section>`;
@@ -539,19 +553,25 @@ function render(){
   const w=M.weeks.find(x=>x.k===S.week)||M.weeks[0]; S.week=w.k;
   $("#ano").textContent="| "+w.d.getFullYear();
   $("#meta").innerHTML=[["Semana",w.n],["Período",w.per],["Emissão",dmy(w.d)],["Revisão",w.rev]].filter(x=>x[1]).map(x=>`<div><span>${x[0]}</span><strong>${esc(x[1])}</strong></div>`).join("");
-  $("#weeks").innerHTML=M.weeks.map(x=>`<button type="button" role="tab" aria-selected="${x.k===w.k}" data-w="${x.k}"><b>Semana ${esc(x.n)}</b><small>${dmy(x.d)}</small></button>`).join("");
+  const atual=M.weeks[0], abas=w.k===atual.k?[atual]:[atual,w];
+  const MESES=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+  let hist="", mes="";
+  M.weeks.forEach(x=>{ const m=`${MESES[x.d.getMonth()]} de ${x.d.getFullYear()}`; if(m!==mes){ mes=m; hist+=`<h5>${m}</h5>`; }
+    hist+=`<button type="button" data-w="${x.k}" aria-current="${x.k===w.k}">Semana ${esc(x.n)}<small>${dmy(x.d)}${x.k===atual.k?" (atual)":""}</small></button>`; });
+  $("#weeks").innerHTML=abas.map(x=>`<button type="button" role="tab" aria-selected="${x.k===w.k}" data-w="${x.k}"><b>Semana ${esc(x.n)}</b><small>${dmy(x.d)}${x.k===atual.k?" (atual)":""}</small></button>`).join("")
+    +(M.weeks.length>1?`<div class="hist"><button type="button" class="hist-btn" aria-expanded="false" aria-controls="hist-panel">Histórico <span>${M.weeks.length}</span></button><div class="hist-panel" id="hist-panel" hidden>${hist}</div></div>`:"");
   const active=M.projs.map(p=>({p,s:snap(p,w)})).filter(x=>x.s);
   const curva=active.filter(x=>!x.p.geral), gerais=active.filter(x=>x.p.geral);
   if(S.proj!=="todos"&&S.proj!=="gerais"&&!curva.some(x=>x.p.k===S.proj)) S.proj="todos";
   if(S.proj==="gerais"&&!gerais.length) S.proj="todos";
   $("#projs").innerHTML=[`<button type="button" aria-pressed="${S.proj==="todos"}" data-p="todos">Todos os projetos</button>`]
     .concat(curva.map(({p})=>`<button type="button" aria-pressed="${S.proj===p.k}" data-p="${esc(p.k)}">${esc(p.nome)}</button>`))
-    .concat(gerais.length?[`<button type="button" class="gen" aria-pressed="${S.proj==="gerais"}" data-p="gerais">Projetos gerais <span>${gerais.length}</span></button>`]:[]).join("");
+    .concat(gerais.length?[`<button type="button" class="gen" aria-pressed="${S.proj==="gerais"}" data-p="gerais">Outros projetos <span>${gerais.length}</span></button>`]:[]).join("");
   const d=$("#destaque"); d.textContent=w.dest||""; d.hidden=!w.dest;
   document.title=`Engenharia de Projetos – Semana ${w.n}`;
   LB=[];
   if(!active.length){ $("#app").innerHTML=`<p class="loading">Nenhum projeto lançado até ${dmy(w.d)}. Lance as linhas da semana na aba Semanal.</p>`; writeHash(); return; }
-  const gSec=()=>gerais.length?`<section class="gerais"><h2 class="gerais-h">Projetos gerais</h2>${gerais.map(({p,s})=>general(p,w,s)).join("")}</section>`:"";
+  const gSec=()=>gerais.length?`<section class="gerais"><h2 class="gerais-h">Outros projetos</h2>${gerais.map(({p,s})=>general(p,w,s)).join("")}</section>`:"";
   let h="";
   if(S.proj==="todos") h=summary(active)+curva.map(({p,s})=>page(p,w,s)).join("")+gSec();
   else if(S.proj==="gerais") h=gSec();
@@ -559,6 +579,9 @@ function render(){
   $("#app").innerHTML=h; writeHash();
 }
 document.addEventListener("click",e=>{
+  const hb=e.target.closest(".hist-btn"), hp=$("#hist-panel");
+  if(hb){ const open=hp.hidden; hp.hidden=!open; hb.setAttribute("aria-expanded",open); if(open){ const c=hp.querySelector('[aria-current="true"]'); c&&c.scrollIntoView({block:"nearest"}); } return; }
+  if(hp&&!hp.hidden&&!e.target.closest(".hist")){ hp.hidden=true; $(".hist-btn").setAttribute("aria-expanded","false"); }
   const wb=e.target.closest("[data-w]"); if(wb){ S.week=wb.dataset.w; render(); return; }
   const pb=e.target.closest("[data-p]"); if(pb){ S.proj=pb.dataset.p; render(); const go=pb.dataset.go&&document.getElementById(pb.dataset.go);
     if(go&&S.proj==="gerais") go.scrollIntoView(); else window.scrollTo({top:0}); return; }
@@ -570,7 +593,8 @@ function openLB(i){ if(!LB.length)return; LBi=(i+LB.length)%LB.length; const x=L
 $("#lb-close").onclick=()=>$("#lb").close();
 $("#lb-prev").onclick=()=>openLB(LBi-1); $("#lb-next").onclick=()=>openLB(LBi+1);
 $("#lb").addEventListener("click",e=>{ if(e.target.id==="lb")$("#lb").close(); });
-document.addEventListener("keydown",e=>{ if(!$("#lb").open)return; if(e.key==="ArrowLeft")openLB(LBi-1); if(e.key==="ArrowRight")openLB(LBi+1); });
+document.addEventListener("keydown",e=>{ const hp=$("#hist-panel"); if(e.key==="Escape"&&hp&&!hp.hidden){ hp.hidden=true; $(".hist-btn").setAttribute("aria-expanded","false"); $(".hist-btn").focus(); }
+  if(!$("#lb").open)return; if(e.key==="ArrowLeft")openLB(LBi-1); if(e.key==="ArrowRight")openLB(LBi+1); });
 
 (function logo(){ const el=$("#logo"); const fb=()=>{el.innerHTML=`<span class="logo-fallback">Enaex Brasil</span>`;};
   if(!CONFIG.logo) return fb(); const img=new Image(); img.alt="Enaex Brasil"; let tried=false;
