@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Engenharia de Projetos – Avanço semanal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#FFFFFF; --text:#2B2F36; --ink:#3D4450; --muted:#8A8F98; --card:#F0F1F3; --rule:#D9DCE0; --track:#E4E6E9;
+  --red:#E30613; --green:#00A651; --curve:#1A9E6A; --amber:#E8A317; --grey:#8A8F98;
+  --head:"Roboto Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{ box-sizing:inherit; }
+body{ margin:0; background:var(--bg); color:var(--text); font-family:var(--body); font-size:15px; line-height:1.45; font-variant-numeric:tabular-nums; }
+.wrap{ max-width:1240px; margin:0 auto; padding:20px 28px 48px; }
+:focus-visible{ outline:2px solid var(--red); outline-offset:2px; }
+button{ font:inherit; }
+
+/* Avisos */
+.notice{ border:1px solid var(--amber); padding:9px 14px; margin-bottom:14px; font-size:13.5px; }
+.notice.error{ border-color:var(--red); }
+.notice[hidden]{ display:none; }
+
+/* Cabeçalho */
+.top{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px 28px; padding-bottom:14px; border-bottom:1px solid var(--rule); }
+.brand{ display:flex; align-items:center; gap:18px; min-width:0; }
+.brand img{ height:40px; width:auto; display:block; }
+.brand .logo-fallback{ font-family:var(--head); font-weight:700; font-size:22px; color:var(--ink); }
+.brand .sep{ width:1px; height:34px; background:var(--rule); }
+.area{ font-family:var(--head); font-weight:300; font-size:28px; color:var(--ink); white-space:nowrap; display:flex; align-items:center; gap:10px; }
+.area::before{ content:""; width:13px; height:13px; background:var(--red); transform:rotate(45deg) skew(8deg,8deg); opacity:.9; }
+.area b{ font-weight:400; color:var(--red); }
+.meta{ display:flex; flex-wrap:wrap; gap:4px 22px; font-size:13px; }
+.meta span{ color:var(--muted); }
+.meta strong{ color:var(--ink); font-weight:600; margin-left:4px; }
+
+/* Abas de semana e filtro de projeto */
+.weeks{ display:flex; gap:2px; overflow-x:auto; margin-top:12px; border-bottom:1px solid var(--rule); scrollbar-width:thin; }
+.weeks button{ background:none; border:0; border-bottom:3px solid transparent; padding:8px 14px 7px; cursor:pointer; color:var(--muted); text-align:left; white-space:nowrap; }
+.weeks button b{ display:block; font-family:var(--head); font-size:17px; font-weight:400; color:var(--ink); }
+.weeks button small{ font-size:12px; }
+.weeks button[aria-selected="true"]{ border-bottom-color:var(--red); }
+.weeks button[aria-selected="true"] b{ font-weight:700; }
+.weeks button:hover b{ color:var(--red); }
+.projs{ display:flex; flex-wrap:wrap; gap:6px; margin:14px 0 4px; }
+.projs button{ background:var(--bg); border:1px solid var(--rule); padding:5px 12px; cursor:pointer; font-size:13.5px; color:var(--ink); }
+.projs button[aria-pressed="true"]{ background:var(--ink); border-color:var(--ink); color:#fff; }
+.destaque{ margin:14px 0 0; padding:10px 14px; background:var(--card); border-left:3px solid var(--red); max-width:90ch; font-size:14.5px; }
+.destaque[hidden]{ display:none; }
+
+/* Resumo */
+.summary{ margin-top:22px; }
+.sec-label{ font-family:var(--head); font-size:15px; color:var(--muted); text-transform:uppercase; letter-spacing:.02em; margin:0 0 8px; font-weight:400; }
+.srow{ display:grid; grid-template-columns:minmax(200px,1.4fr) 2fr 70px 76px 80px 130px; gap:16px; align-items:center; padding:10px 0; border-top:1px solid var(--rule); }
+.srow.head{ border-top:0; font-size:12px; color:var(--muted); padding:4px 0; }
+.srow .num{ text-align:right; }
+.srow button{ background:none; border:0; padding:0; cursor:pointer; text-align:left; font-weight:600; color:var(--ink); font-size:15px; }
+.srow button:hover{ color:var(--red); }
+.bar{ position:relative; height:10px; background:var(--track); }
+.bar i{ position:absolute; inset:0 auto 0 0; background:var(--c,var(--curve)); }
+.bar s{ position:absolute; top:-4px; bottom:-4px; width:2px; margin-left:-1px; background:var(--ink); }
+
+.status{ display:inline-flex; align-items:center; gap:8px; white-space:nowrap; font-size:14px; color:var(--text); }
+.status::before{ content:""; width:12px; height:12px; border-radius:50%; background:var(--c); border:2px solid var(--c); }
+.st-hollow::before{ background:transparent; }
+.neg{ color:var(--red); }
+
+/* Página do projeto (one-pager) */
+.page{ margin-top:34px; padding-top:22px; border-top:2px solid var(--ink); }
+.page-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:20px; }
+.page-head h2{ margin:0; font-family:var(--head); font-weight:700; font-size:clamp(30px,4vw,42px); line-height:1.05; color:var(--ink); text-transform:uppercase; display:flex; align-items:center; gap:14px; }
+.page-head h2::before{ content:""; border-left:9px solid var(--red); border-top:6px solid transparent; border-bottom:6px solid transparent; }
+.page-head .resp{ margin:6px 0 0 23px; color:var(--muted); font-size:13px; }
+.st-box{ text-align:left; }
+.st-box .lbl{ display:block; font-size:13px; color:var(--muted); text-transform:uppercase; margin-bottom:4px; }
+.st-box .status{ font-size:17px; }
+.st-box .status::before{ width:20px; height:20px; }
+
+.cards{ display:grid; grid-template-columns:repeat(4,1fr); gap:26px; margin-top:26px; }
+.card{ background:var(--card); padding:14px 20px 16px; min-width:0; }
+.card h3{ margin:0; font-family:var(--head); font-weight:400; font-size:15px; color:var(--muted); text-transform:uppercase; }
+.card .v{ font-family:var(--head); font-weight:300; font-size:40px; line-height:1.15; color:var(--ink); margin-top:4px; white-space:nowrap; }
+.card .v.neg{ color:var(--red); }
+.card p{ margin:2px 0 0; font-size:14px; color:var(--muted); }
+
+/* Marcos */
+.miles{ overflow-x:auto; margin-top:30px; padding-bottom:4px; }
+.track-m{ position:relative; display:grid; grid-template-columns:repeat(var(--n),minmax(120px,1fr)); min-width:calc(var(--n) * 120px); }
+.track-m::before{ content:""; position:absolute; top:50px; height:3px; background:var(--rule); left:calc(50% / var(--n)); right:calc(50% / var(--n)); }
+.m{ position:relative; text-align:center; padding:0 6px; }
+.m .t{ font-family:var(--head); font-size:17px; color:var(--ink); height:36px; display:flex; align-items:flex-end; justify-content:center; line-height:1.1; }
+.m .dot{ position:relative; width:28px; height:28px; border-radius:50%; margin:3px auto 0; background:#fff; border:2px solid var(--ink); }
+.m.done .dot{ background:var(--ink); }
+.m.cur .dot{ background:var(--ink); box-shadow:0 0 0 4px #fff, 0 0 0 6px var(--ink); }
+.m.late .dot{ background:var(--red); border-color:var(--red); box-shadow:none; }
+.m .d{ font-family:var(--head); font-size:20px; color:var(--ink); margin-top:6px; }
+.m.late .d{ color:var(--red); }
+.m .n{ font-size:13px; color:var(--muted); }
+.m.late .n{ color:var(--red); }
+
+/* Curva S + textos */
+.body{ display:grid; grid-template-columns:1fr 1fr; gap:32px; margin-top:26px; align-items:start; }
+.chart{ position:relative; }
+.chart h3{ margin:0 0 6px; font-family:var(--head); font-weight:700; font-size:15px; color:var(--muted); text-transform:uppercase; }
+.chart svg{ display:block; width:100%; height:auto; background:#FBFBFC; }
+.chart svg text{ font-family:var(--body); fill:var(--muted); font-size:10px; }
+.chart svg .lbl{ font-weight:700; fill:var(--text); font-size:11.5px; }
+.ind{ position:absolute; right:14px; bottom:80px; border-collapse:collapse; font-size:10.5px; background:#fff; }
+.ind caption{ background:var(--ink); color:#fff; padding:3px 6px; font-weight:700; text-align:left; font-size:10px; }
+.ind td{ border:1px solid var(--rule); padding:2px 8px; }
+.ind td+td{ text-align:right; min-width:44px; }
+.ind tr.dv td{ background:var(--red); color:#fff; font-weight:700; border-color:var(--red); }
+.key{ display:flex; gap:18px; font-size:12px; color:var(--muted); margin-top:6px; }
+.key i{ display:inline-block; width:18px; height:2px; vertical-align:middle; margin-right:6px; }
+.texts h4{ margin:0 0 4px; font-size:17px; font-weight:400; color:var(--ink); text-decoration:underline; text-decoration-thickness:1px; text-underline-offset:4px; }
+.texts h4.att{ color:var(--red); }
+.texts .blk{ margin-bottom:20px; }
+.texts p{ margin:0 0 3px; font-size:16px; line-height:1.4; color:#4A505A; max-width:72ch; }
+.texts p small{ color:var(--muted); font-size:13px; }
+.texts .empty{ color:var(--muted); font-size:14px; }
+.note{ margin:-12px 0 20px; color:var(--muted); font-size:14px; }
+
+/* Fotos */
+.photos{ margin-top:26px; }
+.grid-ph{ display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px; }
+.ph{ margin:0; }
+.ph button{ display:block; width:100%; padding:0; border:0; background:var(--card); cursor:zoom-in; aspect-ratio:4/3; overflow:hidden; }
+.ph img{ width:100%; height:100%; object-fit:cover; display:block; }
+.ph figcaption{ font-size:13px; color:var(--muted); margin-top:5px; }
+
+/* Ampliação de foto */
+dialog.lb{ border:0; padding:0; background:transparent; max-width:min(1100px,94vw); }
+dialog.lb::backdrop{ background:rgba(20,24,30,.86); }
+dialog.lb img{ display:block; max-width:100%; max-height:80vh; margin:0 auto; }
+dialog.lb p{ color:#fff; margin:10px 0 0; text-align:center; font-size:14px; }
+dialog.lb .ctl{ display:flex; justify-content:center; gap:10px; margin-top:10px; }
+dialog.lb .ctl button{ background:#fff; border:0; padding:6px 14px; cursor:pointer; color:var(--ink); }
+
+.foot{ display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px; align-items:center; margin-top:36px; padding-top:12px; border-top:1px solid var(--rule); font-size:12.5px; color:var(--muted); }
+.btn{ background:#fff; color:var(--ink); border:1px solid var(--ink); padding:7px 14px; cursor:pointer; font-size:13px; }
+.btn:hover{ background:var(--ink); color:#fff; }
+.loading{ padding:40px 0; color:var(--muted); }
+
+
+/* Projetos gerais */
+.tag{ display:inline-block; margin-left:8px; font-size:11px; color:var(--muted); border:1px solid var(--rule); padding:0 6px; vertical-align:2px; }
+.projs button.gen{ margin-left:auto; }
+.projs button.gen span{ color:var(--muted); margin-left:4px; }
+.projs button.gen[aria-pressed="true"] span{ color:#fff; opacity:.75; }
+.stale{ margin:8px 0 0; font-size:13px; color:var(--amber); }
+.gerais{ margin-top:38px; padding-top:22px; border-top:2px solid var(--ink); }
+.gerais-h{ margin:0 0 16px; font-family:var(--head); font-weight:700; font-size:clamp(26px,3.4vw,34px); color:var(--ink); text-transform:uppercase; display:flex; align-items:center; gap:14px; }
+.gerais-h::before{ content:""; border-left:9px solid var(--red); border-top:6px solid transparent; border-bottom:6px solid transparent; }
+.gp{ border:1px solid var(--rule); border-left:4px solid var(--c); padding:16px 20px 18px; margin-bottom:16px; }
+.gp-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
+.gp-head h3{ margin:0; font-family:var(--head); font-weight:700; font-size:22px; color:var(--ink); line-height:1.15; }
+.gp-head .resp{ margin:3px 0 0; color:var(--muted); font-size:13px; }
+.gp-bar{ display:grid; grid-template-columns:1fr auto; gap:8px 24px; align-items:center; margin-top:14px; }
+.bar.big{ height:16px; }
+.bar.big s{ top:-5px; bottom:-5px; }
+.gp-nums{ display:flex; gap:18px; font-size:13px; color:var(--muted); white-space:nowrap; }
+.gp-nums b{ font-family:var(--head); font-size:20px; font-weight:400; color:var(--ink); }
+.gp-note{ margin:6px 0 0; font-size:13.5px; color:var(--muted); }
+.gp-cols{ display:grid; grid-template-columns:repeat(3,1fr); gap:24px; margin-top:16px; }
+.gp-cols .blk{ margin:0; }
+.gp-cols p{ font-size:14.5px; }
+.gp .photos{ margin-top:16px; }
+.grid-ph.sm{ grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); }
+
+@media (max-width:980px){
+  .gp-cols{ grid-template-columns:1fr; gap:4px; }
+  .gp-bar{ grid-template-columns:1fr; }
+  .projs button.gen{ margin-left:0; }
+  .cards{ grid-template-columns:repeat(2,1fr); gap:14px; }
+  .body{ grid-template-columns:1fr; }
+  .srow{ grid-template-columns:1fr auto; gap:6px 12px; }
+  .srow.head{ display:none; }
+  .srow .bar{ grid-column:1/-1; order:3; }
+  .srow .c-p,.srow .c-r{ display:none; }
+  .srow .c-d{ order:4; text-align:left; font-size:13px; }
+}
+@media (max-width:560px){
+  .wrap{ padding:14px 14px 32px; }
+  .area{ font-size:22px; white-space:normal; }
+  .brand{ flex-wrap:wrap; gap:8px 14px; }
+  .brand .sep{ display:none; }
+  .brand .logo-fallback{ white-space:nowrap; }
+  .brand img{ height:30px; }
+  .card .v{ font-size:32px; }
+  .page-head{ flex-direction:column; gap:10px; }
+  .ind{ position:static; margin-top:8px; }
+}
+@media print{
+  @page{ size:A4 landscape; margin:10mm; }
+  body{ font-size:12px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .wrap{ max-width:none; padding:0; }
+  .notice,.weeks,.projs,.btn,.foot{ display:none !important; }
+  .page{ break-before:page; border-top:0; margin-top:0; padding-top:0; }
+  .photos{ break-inside:avoid; }
+  .gerais{ break-before:page; border-top:0; }
+  .gp{ break-inside:avoid; }
+  .grid-ph{ grid-template-columns:repeat(4,1fr); }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="notice" class="notice" hidden></div>
+
+  <header class="top">
+    <div class="brand">
+      <span id="logo"></span><span class="sep" aria-hidden="true"></span>
+      <div class="area">Engenharia de Projetos <b id="ano">| 2026</b></div>
+    </div>
+    <div class="meta" id="meta"></div>
+  </header>
+
+  <nav class="weeks" id="weeks" role="tablist" aria-label="Semana emitida"></nav>
+  <div class="projs" id="projs" aria-label="Filtrar projeto"></div>
+  <p class="destaque" id="destaque" hidden></p>
+
+  <main id="app"><p class="loading">Carregando dados da planilha…</p></main>
+
+  <footer class="foot">
+    <span id="src"></span>
+    <button class="btn" type="button" onclick="window.print()">Imprimir ou salvar PDF</button>
+  </footer>
+</div>
+
+<dialog class="lb" id="lb" aria-label="Foto ampliada">
+  <img id="lb-img" alt="">
+  <p id="lb-cap"></p>
+  <div class="ctl"><button type="button" id="lb-prev">Anterior</button><button type="button" id="lb-close">Fechar</button><button type="button" id="lb-next">Próxima</button></div>
+</dialog>
+
+<script>
+/* =========================================================
+   CONFIGURAÇÃO
+   planilhaId: o trecho do link da planilha Google entre /d/ e /edit.
+   A planilha precisa estar compartilhada como "Qualquer pessoa com o link: leitor".
+   Enquanto planilhaId estiver vazio, a página mostra dados de exemplo.
+   ========================================================= */
+const CONFIG = {
+  planilhaId: "1o9iGdm8PK8n6olSiMIVxLgSNfxnpb2A3",
+  logo: "logo-enaex.png",                  // arquivo do logo no mesmo repositório
+  tolerancia: { atencao: 3, atraso: 10 }   // p.p. abaixo do previsto
+};
+const ABAS = ["Projetos","Semanal","Curva prevista","Marcos","Semanas"];
+const OPCIONAIS = ["Curva prevista","Marcos","Semanas"];
+const DEMO = {"Projetos": "Projeto,Tipo,Responsável,Início,Término,Orçamento (R$ MM),Start-up,Nota do start-up\nBooster,Curva S,Guilherme,31/07/2026,04/06/2027,34,01/05/2027,Licença de Operação: Mai/27\nAmpliação do PRD 55 – Brinel,Curva S,Guilherme,13/03/2026,27/11/2026,,01/11/2026,Entrega das obras civis\nBarracão Brinel PRD 69,Curva S,Guilherme,05/06/2026,29/01/2027,,01/01/2027,Entrega do barracão\nArmazém de nitrato – Pilar Química,Geral,Guilherme,14/10/2026,18/12/2026,,,\nDepósito de contêineres – Pilar Química,Geral,Guilherme,19/10/2026,29/01/2027,,,\nVestiário AFEN,Geral,Guilherme,01/09/2026,27/11/2026,,,\n", "Semanal": "Data de corte,Projeto,Previsto (%),Realizado (%),Desvio (p.p.),Status,Nota do desvio,Orçamento realizado (R$ MM),Avanços,Atenção,Próximos passos,Fotos\n16/10/2026,Booster,,\"11,2%\",,Em andamento,Obras civis e instalações,\"7,9\",\"Mobilização da equipe de estaqueamento.\nTerraplenagem na área de fabricação.\",Previsão de chuva acima da média para as próximas semanas.,\"Início das fundações com estacas pré-fabricadas.\nRecebimento das armaduras cortadas e dobradas.\",fotos/booster-04.jpg | Mobilização do estaqueamento\n23/10/2026,Booster,,\"12,3%\",,Em andamento,Obras civis e instalações,\"8,7\",\"Terraplenagem nas áreas de fabricação, acessos e embalagem.\nInício das fundações com estacas pré-fabricadas.\nEntrega de equipamentos e armaduras cortadas e dobradas.\nInício da drenagem profunda.\",Volume de precipitação acumulada.,\"Finalização do estaqueamento na 1ª fase da Fabricação.\nTerraplenagem na área do resfriamento.\nInício dos blocos de fundação.\",\"fotos/booster-01.jpg | Estacas pré-fabricadas na área de fabricação\nfotos/booster-02.jpg | Drenagem profunda\nfotos/booster-03.jpg | Terraplenagem dos acessos\"\n16/10/2026,Ampliação do PRD 55 – Brinel,,\"91,2%\",,,,,Montagem mecânica das linhas de extrusão concluída.,,\"Consolidar o registro fotográfico para o relatório de conclusão (Guilherme, até 23/10).\",\n23/10/2026,Ampliação do PRD 55 – Brinel,,\"93,0%\",,,,,\"Registro fotográfico de terraplenagem e drenagem consolidado no relatório de conclusão.\nPlantas de drenagem e de pavimentação/terraplenagem incorporadas como anexos.\",Órgão ambiental avalia especificamente terraplenagem e drenagem: o relatório precisa cobrir todas as etapas.,\"Emitir relatório de conclusão para revisão interna (Guilherme, até 30/10).\",\"fotos/prd55-01.jpg | Linhas de extrusão montadas\nfotos/prd55-02.jpg | Drenagem superficial concluída\"\n16/10/2026,Barracão Brinel PRD 69,,\"48,7%\",,,Muro de arrimo,,,Solução do muro de arrimo em reavaliação.,\"Revisar o dimensionamento do muro de arrimo (Guilherme, até 23/10).\",\n23/10/2026,Barracão Brinel PRD 69,,\"51,1%\",,,Muro de arrimo,,Revisão do dimensionamento do muro de arrimo iniciada.,Indefinição do muro de arrimo segura o início das fundações do barracão.,\"Fechar a solução do muro com a projetista (Guilherme, até 06/11).\",\n16/10/2026,Armazém de nitrato – Pilar Química,\"10,0%\",\"10,0%\",,,,,Visita técnica realizada em 14/10.,,Emitir relatório da visita.,\n23/10/2026,Armazém de nitrato – Pilar Química,\"15,0%\",\"15,0%\",,,,,Relatório da visita técnica emitido.,\"Piso com agregados expostos, umidade elevada e exaustão pouco efetiva.\",\"Solicitar projetos estrutural, arquitetônico, de incêndio e SPDA, LO, licença do Exército e AVCB (Guilherme, até 30/10).\",fotos/pilar-01.jpg | Piso do armazém com agregados expostos\n23/10/2026,Depósito de contêineres – Pilar Química,\"8,0%\",\"3,0%\",,,,,Análise preliminar das Áreas 01 e 02 frente à Portaria 147.,Área 02 fica em frente ao depósito de explosivos: os distanciamentos limitam a capacidade.,\"Receber implantação e topografia para iniciar o projeto de SPDA e aterramento (Guilherme, até 13/11).\",\n16/10/2026,Vestiário AFEN,\"60,0%\",\"55,0%\",,,,,Briefing emitido.,,Consolidar comentários do cliente interno.,\n23/10/2026,Vestiário AFEN,\"70,0%\",\"62,0%\",,,,,Comentários do cliente interno consolidados.,,Emitir revisão do briefing.,\n", "Curva prevista": "Projeto,Data,Previsto acum. (%),Realizado histórico (%)\nBooster,31/07/2026,\"0,0%\",\"0,0%\"\nBooster,07/08/2026,\"0,2%\",\"0,2%\"\nBooster,14/08/2026,\"0,6%\",\"0,6%\"\nBooster,21/08/2026,\"1,3%\",\"1,3%\"\nBooster,28/08/2026,\"2,3%\",\"2,3%\"\nBooster,04/09/2026,\"3,6%\",\"3,6%\"\nBooster,11/09/2026,\"5,1%\",\"4,9%\"\nBooster,18/09/2026,\"6,8%\",\"6,2%\"\nBooster,25/09/2026,\"8,7%\",\"7,5%\"\nBooster,02/10/2026,\"10,8%\",\"8,8%\"\nBooster,09/10/2026,\"13,1%\",\"10,0%\"\nBooster,16/10/2026,\"15,6%\",\nBooster,23/10/2026,\"18,3%\",\nBooster,30/10/2026,\"21,0%\",\nBooster,06/11/2026,\"23,9%\",\nBooster,13/11/2026,\"26,9%\",\nBooster,20/11/2026,\"30,1%\",\nBooster,27/11/2026,\"33,2%\",\nBooster,04/12/2026,\"36,5%\",\nBooster,11/12/2026,\"39,8%\",\nBooster,18/12/2026,\"43,2%\",\nBooster,25/12/2026,\"46,6%\",\nBooster,01/01/2027,\"50,0%\",\nBooster,08/01/2027,\"53,4%\",\nBooster,15/01/2027,\"56,8%\",\nBooster,22/01/2027,\"60,2%\",\nBooster,29/01/2027,\"63,5%\",\nBooster,05/02/2027,\"66,8%\",\nBooster,12/02/2027,\"69,9%\",\nBooster,19/02/2027,\"73,1%\",\nBooster,26/02/2027,\"76,1%\",\nBooster,05/03/2027,\"79,0%\",\nBooster,12/03/2027,\"81,7%\",\nBooster,19/03/2027,\"84,4%\",\nBooster,26/03/2027,\"86,9%\",\nBooster,02/04/2027,\"89,2%\",\nBooster,09/04/2027,\"91,3%\",\nBooster,16/04/2027,\"93,2%\",\nBooster,23/04/2027,\"94,9%\",\nBooster,30/04/2027,\"96,4%\",\nBooster,07/05/2027,\"97,7%\",\nBooster,14/05/2027,\"98,7%\",\nBooster,21/05/2027,\"99,4%\",\nBooster,28/05/2027,\"99,8%\",\nBooster,04/06/2027,\"100,0%\",\nAmpliação do PRD 55 – Brinel,13/03/2026,\"0,0%\",\"0,0%\"\nAmpliação do PRD 55 – Brinel,20/03/2026,\"0,2%\",\"0,2%\"\nAmpliação do PRD 55 – Brinel,27/03/2026,\"0,8%\",\"0,8%\"\nAmpliação do PRD 55 – Brinel,03/04/2026,\"1,9%\",\"1,9%\"\nAmpliação do PRD 55 – Brinel,10/04/2026,\"3,3%\",\"3,3%\"\nAmpliação do PRD 55 – Brinel,17/04/2026,\"5,0%\",\"5,0%\"\nAmpliação do PRD 55 – Brinel,24/04/2026,\"7,0%\",\"7,0%\"\nAmpliação do PRD 55 – Brinel,01/05/2026,\"9,4%\",\"9,4%\"\nAmpliação do PRD 55 – Brinel,08/05/2026,\"12,0%\",\"12,0%\"\nAmpliação do PRD 55 – Brinel,15/05/2026,\"14,9%\",\"14,9%\"\nAmpliação do PRD 55 – Brinel,22/05/2026,\"18,0%\",\"18,0%\"\nAmpliação do PRD 55 – Brinel,29/05/2026,\"21,3%\",\"21,3%\"\nAmpliação do PRD 55 – Brinel,05/06/2026,\"24,7%\",\"24,7%\"\nAmpliação do PRD 55 – Brinel,12/06/2026,\"28,4%\",\"28,4%\"\nAmpliação do PRD 55 – Brinel,19/06/2026,\"32,1%\",\"32,1%\"\nAmpliação do PRD 55 – Brinel,26/06/2026,\"36,0%\",\"36,0%\"\nAmpliação do PRD 55 – Brinel,03/07/2026,\"39,9%\",\"39,9%\"\nAmpliação do PRD 55 – Brinel,10/07/2026,\"43,9%\",\"43,9%\"\nAmpliação do PRD 55 – Brinel,17/07/2026,\"48,0%\",\"48,0%\"\nAmpliação do PRD 55 – Brinel,24/07/2026,\"52,0%\",\"52,0%\"\nAmpliação do PRD 55 – Brinel,31/07/2026,\"56,1%\",\"56,1%\"\nAmpliação do PRD 55 – Brinel,07/08/2026,\"60,1%\",\"60,1%\"\nAmpliação do PRD 55 – Brinel,14/08/2026,\"64,0%\",\"63,9%\"\nAmpliação do PRD 55 – Brinel,21/08/2026,\"67,9%\",\"67,6%\"\nAmpliação do PRD 55 – Brinel,28/08/2026,\"71,6%\",\"71,2%\"\nAmpliação do PRD 55 – Brinel,04/09/2026,\"75,3%\",\"74,7%\"\nAmpliação do PRD 55 – Brinel,11/09/2026,\"78,7%\",\"77,9%\"\nAmpliação do PRD 55 – Brinel,18/09/2026,\"82,0%\",\"81,1%\"\nAmpliação do PRD 55 – Brinel,25/09/2026,\"85,1%\",\"84,0%\"\nAmpliação do PRD 55 – Brinel,02/10/2026,\"88,0%\",\"86,7%\"\nAmpliação do PRD 55 – Brinel,09/10/2026,\"90,6%\",\"89,0%\"\nAmpliação do PRD 55 – Brinel,16/10/2026,\"93,0%\",\nAmpliação do PRD 55 – Brinel,23/10/2026,\"95,0%\",\nAmpliação do PRD 55 – Brinel,30/10/2026,\"96,7%\",\nAmpliação do PRD 55 – Brinel,06/11/2026,\"98,1%\",\nAmpliação do PRD 55 – Brinel,13/11/2026,\"99,2%\",\nAmpliação do PRD 55 – Brinel,20/11/2026,\"99,8%\",\nAmpliação do PRD 55 – Brinel,27/11/2026,\"100,0%\",\nBarracão Brinel PRD 69,05/06/2026,\"0,0%\",\"0,0%\"\nBarracão Brinel PRD 69,12/06/2026,\"0,3%\",\"0,3%\"\nBarracão Brinel PRD 69,19/06/2026,\"1,0%\",\"1,0%\"\nBarracão Brinel PRD 69,26/06/2026,\"2,2%\",\"2,2%\"\nBarracão Brinel PRD 69,03/07/2026,\"3,8%\",\"3,8%\"\nBarracão Brinel PRD 69,10/07/2026,\"5,9%\",\"5,9%\"\nBarracão Brinel PRD 69,17/07/2026,\"8,2%\",\"8,2%\"\nBarracão Brinel PRD 69,24/07/2026,\"11,0%\",\"11,0%\"\nBarracão Brinel PRD 69,31/07/2026,\"14,0%\",\"14,0%\"\nBarracão Brinel PRD 69,07/08/2026,\"17,3%\",\"17,3%\"\nBarracão Brinel PRD 69,14/08/2026,\"20,9%\",\"20,9%\"\nBarracão Brinel PRD 69,21/08/2026,\"24,6%\",\"24,1%\"\nBarracão Brinel PRD 69,28/08/2026,\"28,6%\",\"27,5%\"\nBarracão Brinel PRD 69,04/09/2026,\"32,7%\",\"30,8%\"\nBarracão Brinel PRD 69,11/09/2026,\"36,9%\",\"34,1%\"\nBarracão Brinel PRD 69,18/09/2026,\"41,2%\",\"37,3%\"\nBarracão Brinel PRD 69,25/09/2026,\"45,6%\",\"40,4%\"\nBarracão Brinel PRD 69,02/10/2026,\"50,0%\",\"43,3%\"\nBarracão Brinel PRD 69,09/10/2026,\"54,4%\",\"46,1%\"\nBarracão Brinel PRD 69,16/10/2026,\"58,8%\",\nBarracão Brinel PRD 69,23/10/2026,\"63,1%\",\nBarracão Brinel PRD 69,30/10/2026,\"67,3%\",\nBarracão Brinel PRD 69,06/11/2026,\"71,4%\",\nBarracão Brinel PRD 69,13/11/2026,\"75,4%\",\nBarracão Brinel PRD 69,20/11/2026,\"79,1%\",\nBarracão Brinel PRD 69,27/11/2026,\"82,7%\",\nBarracão Brinel PRD 69,04/12/2026,\"86,0%\",\nBarracão Brinel PRD 69,11/12/2026,\"89,0%\",\nBarracão Brinel PRD 69,18/12/2026,\"91,8%\",\nBarracão Brinel PRD 69,25/12/2026,\"94,1%\",\nBarracão Brinel PRD 69,01/01/2027,\"96,2%\",\nBarracão Brinel PRD 69,08/01/2027,\"97,8%\",\nBarracão Brinel PRD 69,15/01/2027,\"99,0%\",\nBarracão Brinel PRD 69,22/01/2027,\"99,7%\",\nBarracão Brinel PRD 69,29/01/2027,\"100,0%\",\n", "Marcos": "Projeto,Marco,Data prevista,Data realizada\nBooster,Kick-off,01/07/2026,01/07/2026\nBooster,Licença Ambiental,01/08/2026,28/08/2026\nBooster,Obras civis,01/03/2027,\nBooster,Montagem eletromecânica,01/04/2027,\nBooster,Licença de Operação,01/05/2027,\nBooster,Start-up,01/05/2027,\nAmpliação do PRD 55 – Brinel,Início das obras civis,01/03/2026,09/03/2026\nAmpliação do PRD 55 – Brinel,Terraplenagem e drenagem,01/06/2026,26/06/2026\nAmpliação do PRD 55 – Brinel,Estruturas,01/09/2026,25/09/2026\nAmpliação do PRD 55 – Brinel,Relatório de conclusão,01/11/2026,\nAmpliação do PRD 55 – Brinel,Entrega,01/11/2026,\nBarracão Brinel PRD 69,Projeto executivo,01/07/2026,17/07/2026\nBarracão Brinel PRD 69,Muro de arrimo,01/11/2026,\nBarracão Brinel PRD 69,Fundações,01/12/2026,\nBarracão Brinel PRD 69,Estrutura e cobertura,01/01/2027,\nBarracão Brinel PRD 69,Entrega,01/01/2027,\n", "Semanas": "Data de corte,Revisão,Destaque\n23/10/2026,00,Booster 6 p.p. abaixo do previsto pela chuva acumulada; PRD 69 segue atrasado aguardando a solução do muro de arrimo.\n16/10/2026,00,\n"};
+
+/* ---------- Utilitários ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const key=s=>String(s??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\(.*?\)/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"");
+function parseCSV(text){
+  const rows=[];let row=[],f="",q=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){f+='"';i++;} else q=false; } else f+=c; }
+    else if(c==='"') q=true; else if(c===','){row.push(f);f="";}
+    else if(c==='\n'||c==='\r'){ if(c==='\r'&&text[i+1]==='\n')i++; row.push(f);rows.push(row);row=[];f=""; }
+    else f+=c; }
+  if(f!==""||row.length){row.push(f);rows.push(row);}
+  if(!rows.length) return [];
+  const head=rows.shift().map(key);
+  return rows.filter(r=>r.some(v=>String(v).trim()!=="")).map(r=>Object.fromEntries(head.map((h,i)=>[h,(r[i]??"").trim()])));
+}
+function pct(v){ if(v==null)return null; let s=String(v).trim(); if(!s)return null; const p=s.includes("%");
+  s=s.replace("%","").replace(/\s/g,""); if(s.includes(","))s=s.replace(/\./g,"").replace(",",".");
+  let n=parseFloat(s); if(isNaN(n))return null; if(!p&&n>0&&n<=1)n*=100; return Math.max(0,Math.min(100,n)); }
+function num(v){ if(v==null||String(v).trim()==="")return null; let s=String(v).replace(/[R$\s]/g,""); if(s.includes(","))s=s.replace(/\./g,"").replace(",","."); const n=parseFloat(s); return isNaN(n)?null:n; }
+const MES=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+function parseDate(v){ if(!v)return null; const s=String(v).trim(); let m;
+  if(m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/)){let y=+m[3]; if(y<100)y+=2000; return new Date(y,m[2]-1,+m[1]);}
+  if(m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)) return new Date(+m[1],m[2]-1,+m[3]);
+  if(m=s.match(/^(\d{1,2})\/(\d{4})$/)) return new Date(+m[2],m[1]-1,1);
+  if(m=s.match(/^([A-Za-z]{3})[a-zç]*[\/\s-]+(\d{2,4})$/i)){ const i=MES.findIndex(x=>x.toLowerCase()===m[1].toLowerCase()); if(i>=0){let y=+m[2]; if(y<100)y+=2000; return new Date(y,i,1);} }
+  return null; }
+const dkey=d=>d?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`:"";
+const dmy=d=>d?d.toLocaleDateString("pt-BR"):"";
+const dm=d=>d?d.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"}):"";
+const mesAno=d=>d?`${MES[d.getMonth()]}/${String(d.getFullYear()).slice(2)}`:"–";
+function isoWeek(d){ const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())); const n=t.getUTCDay()||7; t.setUTCDate(t.getUTCDate()+4-n); const y=new Date(Date.UTC(t.getUTCFullYear(),0,1)); return Math.ceil(((t-y)/864e5+1)/7); }
+const fP=n=>n==null?"–":n.toLocaleString("pt-BR",{maximumFractionDigits:1})+"%";
+const fP0=n=>n==null?"–":Math.round(n)+"%";
+function fD(n){ if(n==null)return "–"; const r=Math.round(n*10)/10; return (r>0?"+":r<0?"\u2212":"")+Math.abs(r).toLocaleString("pt-BR",{maximumFractionDigits:1})+" p.p."; }
+const fR=n=>n==null?"–":"R$ "+n.toLocaleString("pt-BR",{maximumFractionDigits:1})+" MM";
+const lines=s=>String(s||"").split(/\r?\n/).map(x=>x.replace(/^\s*[-•·*]\s*/,"").trim()).filter(Boolean);
+
+const ST={ andamento:{l:"Em andamento",c:"var(--green)"}, atencao:{l:"Em atenção",c:"var(--amber)"}, atrasado:{l:"Atrasado",c:"var(--red)"},
+  concluido:{l:"Concluído",c:"var(--ink)"}, paralisado:{l:"Paralisado",c:"var(--grey)"}, nao:{l:"Não iniciado",c:"var(--grey)",h:1} };
+function stOf(manual,real,dev){ const m=key(manual);
+  if(m.includes("andamento"))return "andamento"; if(m.includes("aten"))return "atencao"; if(m.startsWith("atras"))return "atrasado";
+  if(m.startsWith("conc"))return "concluido"; if(m.startsWith("paral"))return "paralisado"; if(m.startsWith("nao"))return "nao";
+  if(real!=null&&real>=100)return "concluido"; if(dev==null||dev>=-CONFIG.tolerancia.atencao)return "andamento";
+  return dev>=-CONFIG.tolerancia.atraso?"atencao":"atrasado"; }
+const stHTML=k=>`<span class="status${ST[k].h?" st-hollow":""}" style="--c:${ST[k].c}">${ST[k].l}</span>`;
+function imgUrl(s,w){ s=String(s).trim(); const m=s.match(/\/d\/([\w-]{20,})/)||s.match(/[?&]id=([\w-]{20,})/);
+  return m?`https://drive.google.com/thumbnail?id=${m[1]}&sz=w${w}`:s; }
+
+/* ---------- Carregamento ---------- */
+async function getCSV(aba){
+  const url=`https://docs.google.com/spreadsheets/d/${CONFIG.planilhaId}/gviz/tq?tqx=out:csv&headers=1&sheet=${encodeURIComponent(aba)}`;
+  try{ const r=await fetch(url,{cache:"no-store"}); if(!r.ok)throw new Error("HTTP "+r.status); return parseCSV(await r.text()); }
+  catch(e){ if(OPCIONAIS.includes(aba))return []; throw new Error(`aba ${aba}: ${e.message}`); }
+}
+async function load(){
+  if(!CONFIG.planilhaId){
+    notice("Exibindo dados de exemplo (números e fotos fictícios). Para usar seus dados, preencha planilhaId no bloco CONFIG do index.html.");
+    return {t:Object.fromEntries(ABAS.map(a=>[a,parseCSV(DEMO[a]||"")])),demo:true};
+  }
+  const res=await Promise.all(ABAS.map(getCSV));
+  return {t:Object.fromEntries(ABAS.map((a,i)=>[a,res[i]])),demo:false};
+}
+function notice(m,err){ const n=$("#notice"); n.textContent=m; n.hidden=false; n.classList.toggle("error",!!err); }
+
+/* ---------- Modelo ---------- */
+let M, S={week:null,proj:"todos"};
+function model(t){
+  const by=(rows,f)=>rows.reduce((o,r)=>{const k=f(r); if(k)(o[k] ||= []).push(r); return o;},{});
+  const sortD=o=>{Object.values(o).forEach(a=>a.sort((x,y)=>x.d-y.d)); return o;};
+  const base=sortD(by(t["Curva prevista"].map(r=>({k:key(r.projeto),d:parseDate(r.data),prev:pct(r.previsto_acum),real:pct(r.realizado_historico)})).filter(r=>r.d),r=>r.k));
+  const sem=sortD(by(t["Semanal"].map(r=>({k:key(r.projeto),d:parseDate(r.data_de_corte),prev:pct(r.previsto),real:pct(r.realizado),
+    st:r.status,nota:r.nota_do_desvio,orc:num(r.orcamento_realizado),adv:lines(r.avancos),att:lines(r.atencao),nxt:lines(r.proximos_passos),
+    fotos:lines(r.fotos).map(l=>{const [src,...c]=l.split("|"); return {src:src.trim(),cap:c.join("|").trim()};}).filter(f=>f.src)})).filter(r=>r.d&&r.k),r=>r.k));
+  const projs=t["Projetos"].filter(r=>r.projeto).map(r=>{const k=key(r.projeto), tp=key(r.tipo);
+    return {k,id:"p-"+k,nome:r.projeto,resp:r.responsavel,ini:parseDate(r.inicio),fim:parseDate(r.termino),orc:num(r.orcamento),
+      su:parseDate(r.start_up),suRaw:r.start_up,suNota:r.nota_do_start_up,
+      geral: tp.startsWith("ger") || (!tp.startsWith("cur") && !base[k])};});
+  const marcos=by(t["Marcos"].map(r=>({k:key(r.projeto),nome:r.marco,prev:parseDate(r.data_prevista),raw:r.data_prevista,real:parseDate(r.data_realizada)})).filter(r=>r.nome),r=>r.k);
+  Object.values(marcos).forEach(a=>a.sort((x,y)=>(x.prev||0)-(y.prev||0)));
+  const info={}; t["Semanas"].forEach(r=>{const d=parseDate(r.data_de_corte); if(d) info[dkey(d)]={rev:r.revisao,dest:r.destaque,per:r.periodo};});
+  const ks=new Set(Object.keys(info)); Object.values(sem).flat().forEach(r=>ks.add(dkey(r.d)));
+  const weeks=[...ks].map(k=>{const [y,m,d]=k.split("-").map(Number); const dt=new Date(y,m-1,d); const i=info[k]||{};
+    return {k,d:dt,n:isoWeek(dt),rev:i.rev,dest:i.dest,per:i.per||`${dm(new Date(y,m-1,d-4))} a ${dmy(dt)}`};}).sort((a,b)=>b.d-a.d);
+  return {weeks,projs,base,sem,marcos};
+}
+const lastLE=(arr,d,f)=>{ for(let i=(arr||[]).length-1;i>=0;i--){ if(arr[i].d<=d && f(arr[i])) return arr[i]; } return null; };
+function snap(p,w){
+  const s=M.sem[p.k]||[], b=M.base[p.k]||[];
+  const ex=s.find(r=>dkey(r.d)===w.k)||null;
+  const lastS=lastLE(s,w.d,()=>true);
+  if(!ex && !lastS) return null;
+  if(!ex && key(lastS.st).startsWith("conc")) return null;
+  const ref=ex||lastS;
+  let prev=ref.prev; if(prev==null){ const bp=lastLE(b,w.d,r=>r.prev!=null); prev=bp?bp.prev:lastLE(s,w.d,r=>r.prev!=null)?.prev??null; }
+  const rs=lastLE(s,w.d,r=>r.real!=null), rb=lastLE(b,w.d,r=>r.real!=null);
+  const real=rs?rs.real:(rb?rb.real:null);
+  const dev=(prev!=null&&real!=null)?real-prev:null;
+  return {prev,real,dev,orc:lastLE(s,w.d,r=>r.orc!=null)?.orc??null,nota:ref.nota,st:stOf(ref.st,real,dev),
+    adv:ex?ex.adv:[],att:ex?ex.att:[],nxt:ex?ex.nxt:[],fotos:ex?ex.fotos:[],stale:ex?null:lastS.d};
+}
+
+/* ---------- Componentes ---------- */
+function bar(s,big){ return `<div class="bar${big?" big":""}" style="--c:${ST[s.st].c}" role="img" aria-label="Previsto ${fP(s.prev)}, realizado ${fP(s.real)}"><i style="width:${s.real||0}%"></i>${s.prev!=null?`<s style="left:${s.prev}%"></s>`:""}</div>`; }
+const staleNote=s=>s.stale?`<p class="stale">Sem atualização nesta semana. Valores da última atualização (${dmy(s.stale)}).</p>`:"";
+
+function milestones(p,w,s){
+  const ms=M.marcos[p.k]||[]; if(!ms.length)return "";
+  const ci=ms.findIndex(m=>!(m.real&&m.real<=w.d));
+  return `<div class="miles"><div class="track-m" style="--n:${ms.length}">${ms.map((m,i)=>{
+    let cls="",note="";
+    if(ci<0||i<ci) cls="done";
+    else if(i===ci){ const late=(s.dev!=null&&s.dev< -CONFIG.tolerancia.atencao)||(m.prev&&m.prev<w.d);
+      cls=late?"late":"cur"; note=late?`Em atraso${s.dev<0?" – "+fD(s.dev):""}`:"Em andamento"; }
+    return `<div class="m ${cls}"><div class="t">${esc(m.nome)}</div><div class="dot"></div><div class="d">${m.prev?mesAno(m.prev):esc(m.raw||"–")}</div><div class="n">${note}</div></div>`;
+  }).join("")}</div></div>`;
+}
+
+function chart(p,w,s){
+  const b=M.base[p.k]||[], sm=M.sem[p.k]||[];
+  const pv=(b.some(r=>r.prev!=null)?b:sm).filter(r=>r.prev!=null).map(r=>({d:r.d,v:r.prev}));
+  const rm=new Map(); b.filter(r=>r.real!=null).forEach(r=>rm.set(dkey(r.d),{d:r.d,v:r.real})); sm.filter(r=>r.real!=null).forEach(r=>rm.set(dkey(r.d),{d:r.d,v:r.real}));
+  const rl=[...rm.values()].filter(r=>r.d<=w.d).sort((a,b)=>a.d-b.d);
+  const all=[...pv,...rl].map(r=>r.d).concat([p.ini,p.fim].filter(Boolean));
+  if(all.length<2) return `<p class="empty">Sem curva cadastrada.</p>`;
+  const x0=new Date(Math.min(...all)), x1=new Date(Math.max(...all));
+  const W=640,H=320,L=46,R=16,T=18,B=40, span=(x1-x0)||1;
+  const X=d=>L+(d-x0)/span*(W-L-R), Y=v=>T+(1-v/100)*(H-T-B);
+  let g="";
+  for(let v=0;v<=100;v+=10){ g+=`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="#E6E8EB" stroke-width="${v%50?0.6:1}"/>`;
+    if(v%20===0) g+=`<text x="${L-6}" y="${Y(v)+3}" text-anchor="end">${v}%</text>`; }
+  let lx=-99; for(let d=new Date(x0.getFullYear(),x0.getMonth()+1,1); d<=x1; d=new Date(d.getFullYear(),d.getMonth()+1,1)){
+    if(X(d)-lx<38) continue; lx=X(d);
+    g+=`<line x1="${X(d)}" x2="${X(d)}" y1="${H-B}" y2="${H-B+4}" stroke="#B9BDC3"/><text x="${X(d)}" y="${H-B+16}" text-anchor="middle">${mesAno(d)}</text>`; }
+  const path=pts=>pts.map((r,i)=>(i?"L":"M")+X(r.d).toFixed(1)+" "+Y(r.v).toFixed(1)).join(" ");
+  if(pv.length) g+=`<path d="${path(pv)}" fill="none" stroke="var(--red)" stroke-width="2"/>`;
+  if(rl.length) g+=`<path d="${path(rl)}" fill="none" stroke="var(--curve)" stroke-width="2.4"/>`;
+  if(s.prev!=null){ const yp=Y(s.prev); let yr=rl.length?Y(rl[rl.length-1].v)+16:0; if(rl.length&&yr-(yp-8)<14) yr=yp+10;
+    g+=`<circle cx="${X(w.d)}" cy="${yp}" r="3" fill="var(--red)"/><text class="lbl" x="${X(w.d)}" y="${yp-8}" text-anchor="middle">${fP0(s.prev)}</text>`;
+    if(rl.length){ const lr=rl[rl.length-1]; g+=`<circle cx="${X(lr.d)}" cy="${Y(lr.v)}" r="3" fill="var(--curve)"/><text class="lbl" x="${X(lr.d)+6}" y="${yr}" text-anchor="start">${fP0(s.real)}</text>`; } }
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Curva S: previsto ${fP(s.prev)}, realizado ${fP(s.real)}">${g}</svg>
+    <table class="ind"><caption>Indicador de avanço físico (semanal)</caption>
+      <tr><td>Previsto</td><td>${fP(s.prev)}</td></tr><tr><td>Realizado</td><td>${fP(s.real)}</td></tr>
+      <tr class="dv"><td>Desvio</td><td>${fD(s.dev)}</td></tr></table>
+    <div class="key"><span><i style="background:var(--red)"></i>Previsto acumulado</span><span><i style="background:var(--curve)"></i>Realizado acumulado</span></div>`;
+}
+
+function texts(s){
+  const blk=(title,arr,cls)=>`<div class="blk"><h4 class="${cls}">${title}</h4>${arr.length?arr.map(t=>`<p>${esc(t)}</p>`).join(""):`<p class="empty">Sem registros nesta semana.</p>`}</div>`;
+  return blk("Principais avanços",s.adv,"")+blk("Atenção",s.att,"att")+blk("Próximos passos",s.nxt,"");
+}
+
+let LB=[],LBi=0;
+function photos(s,small){
+  if(!s.fotos.length)return "";
+  return `<section class="photos"><h3 class="sec-label">Registro fotográfico</h3><div class="grid-ph${small?" sm":""}">${s.fotos.map(x=>{
+    const i=LB.push(x)-1;
+    return `<figure class="ph"><button type="button" data-lb="${i}" aria-label="Ampliar foto${x.cap?": "+esc(x.cap):""}"><img loading="lazy" src="${esc(imgUrl(x.src,640))}" alt="${esc(x.cap||"Foto do projeto")}"></button>${x.cap?`<figcaption>${esc(x.cap)}</figcaption>`:""}</figure>`;}).join("")}</div></section>`;
+}
+
+function page(p,w,s){
+  return `<article class="page" id="${esc(p.id)}">
+    <div class="page-head">
+      <div><h2>${esc(p.nome)}</h2>${p.resp?`<p class="resp">Responsável: ${esc(p.resp)}</p>`:""}</div>
+      <div class="st-box"><span class="lbl">Status</span>${stHTML(s.st)}</div>
+    </div>
+    ${staleNote(s)}
+    <div class="cards">
+      <div class="card"><h3>Avanço físico</h3><div class="v">${fP0(s.real)}</div><p>previsto: ${fP0(s.prev)}</p></div>
+      <div class="card"><h3>Desvio</h3><div class="v ${s.dev!=null&&s.dev< -0.05?"neg":""}">${fD(s.dev)}</div><p>${esc(s.nota||"Realizado − previsto")}</p></div>
+      <div class="card"><h3>Orçamento</h3><div class="v">${fR(p.orc)}</div><p>Realizado: ${fR(s.orc)}</p></div>
+      <div class="card"><h3>Start-up</h3><div class="v">${p.su?mesAno(p.su):esc(p.suRaw||"–")}</div><p>${esc(p.suNota||"")}</p></div>
+    </div>
+    ${milestones(p,w,s)}
+    <div class="body">
+      <div class="chart"><h3>Curva S | Avanço físico acumulado</h3>${chart(p,w,s)}</div>
+      <div class="texts">${texts(s)}</div>
+    </div>
+    ${photos(s)}
+  </article>`;
+}
+
+function general(p,w,s){
+  return `<article class="gp" id="${esc(p.id)}" style="--c:${ST[s.st].c}">
+    <div class="gp-head">
+      <div><h3>${esc(p.nome)}</h3><p class="resp">${[p.resp&&"Responsável: "+p.resp, p.fim&&"Término previsto: "+mesAno(p.fim)].filter(Boolean).map(esc).join(" | ")}</p></div>
+      ${stHTML(s.st)}
+    </div>
+    ${staleNote(s)}
+    <div class="gp-bar">${bar(s,true)}
+      <div class="gp-nums"><span>Realizado <b>${fP0(s.real)}</b></span>${s.prev!=null?`<span>Previsto <b>${fP0(s.prev)}</b></span><span class="${s.dev< -0.05?"neg":""}">${fD(s.dev)}</span>`:""}</div>
+    </div>
+    ${s.nota?`<p class="gp-note">${esc(s.nota)}</p>`:""}
+    <div class="gp-cols texts">${texts(s)}</div>
+    ${photos(s,true)}
+  </article>`;
+}
+
+/* ---------- Tela ---------- */
+function readHash(){ const h=new URLSearchParams(location.hash.slice(1)); S.week=h.get("semana")||S.week; S.proj=h.get("projeto")||S.proj; }
+function writeHash(){ history.replaceState(null,"",`#semana=${S.week}&projeto=${S.proj}`); }
+function summary(list){
+  return `<section class="summary"><h2 class="sec-label">Resumo da semana</h2>
+    <div class="srow head"><span>Projeto</span><span>Avanço (realizado e marcador do previsto)</span><span class="num">Previsto</span><span class="num">Realizado</span><span class="num">Desvio</span><span>Status</span></div>
+    ${list.map(({p,s})=>`<div class="srow"><span><button type="button" data-p="${p.geral?"gerais":esc(p.k)}" data-go="${esc(p.id)}">${esc(p.nome)}</button>${p.geral?`<span class="tag">Geral</span>`:""}</span>${bar(s)}
+      <span class="num c-p">${fP(s.prev)}</span><span class="num c-r"><b>${fP(s.real)}</b></span>
+      <span class="num c-d ${s.dev< -0.05?"neg":""}">${fD(s.dev)}</span><span class="c-s">${stHTML(s.st)}</span></div>`).join("")}
+  </section>`;
+}
+function render(){
+  const w=M.weeks.find(x=>x.k===S.week)||M.weeks[0]; S.week=w.k;
+  $("#ano").textContent="| "+w.d.getFullYear();
+  $("#meta").innerHTML=[["Semana",w.n],["Período",w.per],["Emissão",dmy(w.d)],["Revisão",w.rev]].filter(x=>x[1]).map(x=>`<div><span>${x[0]}</span><strong>${esc(x[1])}</strong></div>`).join("");
+  $("#weeks").innerHTML=M.weeks.map(x=>`<button type="button" role="tab" aria-selected="${x.k===w.k}" data-w="${x.k}"><b>Semana ${esc(x.n)}</b><small>${dmy(x.d)}</small></button>`).join("");
+  const active=M.projs.map(p=>({p,s:snap(p,w)})).filter(x=>x.s);
+  const curva=active.filter(x=>!x.p.geral), gerais=active.filter(x=>x.p.geral);
+  if(S.proj!=="todos"&&S.proj!=="gerais"&&!curva.some(x=>x.p.k===S.proj)) S.proj="todos";
+  if(S.proj==="gerais"&&!gerais.length) S.proj="todos";
+  $("#projs").innerHTML=[`<button type="button" aria-pressed="${S.proj==="todos"}" data-p="todos">Todos os projetos</button>`]
+    .concat(curva.map(({p})=>`<button type="button" aria-pressed="${S.proj===p.k}" data-p="${esc(p.k)}">${esc(p.nome)}</button>`))
+    .concat(gerais.length?[`<button type="button" class="gen" aria-pressed="${S.proj==="gerais"}" data-p="gerais">Projetos gerais <span>${gerais.length}</span></button>`]:[]).join("");
+  const d=$("#destaque"); d.textContent=w.dest||""; d.hidden=!w.dest;
+  document.title=`Engenharia de Projetos – Semana ${w.n}`;
+  LB=[];
+  if(!active.length){ $("#app").innerHTML=`<p class="loading">Nenhum projeto lançado até ${dmy(w.d)}. Lance as linhas da semana na aba Semanal.</p>`; writeHash(); return; }
+  const gSec=()=>gerais.length?`<section class="gerais"><h2 class="gerais-h">Projetos gerais</h2>${gerais.map(({p,s})=>general(p,w,s)).join("")}</section>`:"";
+  let h="";
+  if(S.proj==="todos") h=summary(active)+curva.map(({p,s})=>page(p,w,s)).join("")+gSec();
+  else if(S.proj==="gerais") h=gSec();
+  else { const x=curva.find(a=>a.p.k===S.proj); h=page(x.p,w,x.s); }
+  $("#app").innerHTML=h; writeHash();
+}
+document.addEventListener("click",e=>{
+  const wb=e.target.closest("[data-w]"); if(wb){ S.week=wb.dataset.w; render(); return; }
+  const pb=e.target.closest("[data-p]"); if(pb){ S.proj=pb.dataset.p; render(); const go=pb.dataset.go&&document.getElementById(pb.dataset.go);
+    if(go&&S.proj==="gerais") go.scrollIntoView(); else window.scrollTo({top:0}); return; }
+  const lb=e.target.closest("[data-lb]"); if(lb){ openLB(+lb.dataset.lb); }
+});
+function openLB(i){ if(!LB.length)return; LBi=(i+LB.length)%LB.length; const x=LB[LBi];
+  $("#lb-img").src=imgUrl(x.src,2000); $("#lb-img").alt=x.cap||"Foto do projeto"; $("#lb-cap").textContent=x.cap||"";
+  const d=$("#lb"); if(!d.open)d.showModal(); }
+$("#lb-close").onclick=()=>$("#lb").close();
+$("#lb-prev").onclick=()=>openLB(LBi-1); $("#lb-next").onclick=()=>openLB(LBi+1);
+$("#lb").addEventListener("click",e=>{ if(e.target.id==="lb")$("#lb").close(); });
+document.addEventListener("keydown",e=>{ if(!$("#lb").open)return; if(e.key==="ArrowLeft")openLB(LBi-1); if(e.key==="ArrowRight")openLB(LBi+1); });
+
+(function logo(){ const el=$("#logo"); const fb=()=>{el.innerHTML=`<span class="logo-fallback">Enaex Brasil</span>`;};
+  if(!CONFIG.logo) return fb(); const img=new Image(); img.alt="Enaex Brasil"; img.onerror=fb; img.src=CONFIG.logo; el.appendChild(img); })();
+
+load().then(({t,demo})=>{
+  M=model(t);
+  if(!M.weeks.length){ $("#app").innerHTML=`<p class="loading">Nenhuma semana lançada. Inclua as linhas da semana na aba Semanal.</p>`; return; }
+  readHash(); render();
+  $("#src").textContent=demo?"Fonte: dados de exemplo":`Fonte: planilha de controle. Carregado em ${new Date().toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})}.`;
+}).catch(e=>{ $("#app").innerHTML=""; notice(`Não foi possível ler a planilha (${e.message}). Confira se ela está compartilhada como "Qualquer pessoa com o link: leitor" e se os nomes das abas não foram alterados.`,true); });
+</script>
+</body>
+</html>
