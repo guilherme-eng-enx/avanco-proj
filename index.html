@@ -87,6 +87,7 @@ button{ font:inherit; }
 .card h3{ margin:0; font-family:var(--head); font-weight:400; font-size:15px; color:var(--muted); text-transform:uppercase; }
 .card .v{ font-family:var(--head); font-weight:300; font-size:40px; line-height:1.15; color:var(--ink); margin-top:4px; white-space:nowrap; }
 .card .v.neg{ color:var(--red); }
+.card .v.pos{ color:var(--green); }
 .card p{ margin:2px 0 0; font-size:14px; color:var(--muted); }
 
 /* Marcos */
@@ -116,6 +117,8 @@ button{ font:inherit; }
 .ind td{ border:1px solid var(--rule); padding:2px 8px; }
 .ind td+td{ text-align:right; min-width:44px; }
 .ind tr.dv td{ background:var(--red); color:#fff; font-weight:700; border-color:var(--red); }
+.ind tr.dv.pos td{ background:var(--green); border-color:var(--green); }
+.ind tr.dv.zero td{ background:var(--ink); border-color:var(--ink); }
 .key{ display:flex; gap:18px; font-size:12px; color:var(--muted); margin-top:6px; }
 .key i{ display:inline-block; width:18px; height:2px; vertical-align:middle; margin-right:6px; }
 .texts h4{ margin:0 0 4px; font-size:17px; font-weight:400; color:var(--ink); text-decoration:underline; text-decoration-thickness:1px; text-underline-offset:4px; }
@@ -247,8 +250,9 @@ dialog.lb .ctl button{ background:#fff; border:0; padding:6px 14px; cursor:point
    Enquanto planilhaId estiver vazio, a página mostra dados de exemplo.
    ========================================================= */
 const CONFIG = {
-  planilhaId: "1NSfWGI4W0xSjJqYENBe5PW8qJCmV5_kol2d1Mh-BPtM",
-  logo: "logo-enaex.png.png",                  // arquivo do logo no mesmo repositório
+  planilhaId: "",
+  driveApiKey: "",                         // chave de API do Google (Drive) para listar as pastas de fotos
+  logo: "logo-enaex.png",                  // arquivo do logo no mesmo repositório
   tolerancia: { atencao: 3, atraso: 10 }   // p.p. abaixo do previsto
 };
 const ABAS = ["Projetos","Semanal","Curva prevista","Marcos","Semanas"];
@@ -332,6 +336,7 @@ function model(t){
   const projs=t["Projetos"].filter(r=>r.projeto).map(r=>{const k=key(r.projeto), tp=key(r.tipo);
     return {k,id:"p-"+k,nome:r.projeto,resp:r.responsavel,ini:parseDate(r.inicio),fim:parseDate(r.termino),orc:num(r.orcamento),
       su:parseDate(r.start_up),suRaw:r.start_up,suNota:r.nota_do_start_up,
+      pasta:((String(r.pasta_de_fotos||"").match(/folders\/([\w-]{10,})/)||String(r.pasta_de_fotos||"").match(/[?&]id=([\w-]{10,})/)||[])[1])||null,
       geral: tp.startsWith("ger") || (!tp.startsWith("cur") && !base[k])};});
   const marcos=by(t["Marcos"].map(r=>({k:key(r.projeto),nome:r.marco,prev:parseDate(r.data_prevista),raw:r.data_prevista,real:parseDate(r.data_realizada)})).filter(r=>r.nome),r=>r.k);
   Object.values(marcos).forEach(a=>a.sort((x,y)=>(x.prev||0)-(y.prev||0)));
@@ -354,7 +359,40 @@ function snap(p,w){
   const real=rs?rs.real:(rb?rb.real:null);
   const dev=(prev!=null&&real!=null)?real-prev:null;
   return {prev,real,dev,orc:lastLE(s,w.d,r=>r.orc!=null)?.orc??null,nota:ref.nota,st:stOf(ref.st,real,dev),
-    adv:ex?ex.adv:[],att:ex?ex.att:[],nxt:ex?ex.nxt:[],fotos:ex?ex.fotos:[],stale:ex?null:lastS.d};
+    adv:ex?ex.adv:[],att:ex?ex.att:[],nxt:ex?ex.nxt:[],fotos:(ex?ex.fotos:[]).concat(driveDaSemana(p,w)),stale:ex?null:lastS.d};
+}
+
+/* ---------- Fotos das pastas do Drive ---------- */
+const DRIVE={};
+const GENERICO=/^((img|dsc|dscn|pxl|mvimg|photo|image|whatsapp image|screenshot|captura de tela)[\s_-]|[\d\s_.()-]+$)/i;
+function quando(f){
+  const t=f.imageMediaMetadata&&f.imageMediaMetadata.time;
+  const m=t&&t.match(/^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2})/);
+  return m?new Date(+m[1],m[2]-1,+m[3],+m[4],+m[5]):new Date(f.createdTime);
+}
+async function carregarDrive(){
+  if(!CONFIG.driveApiKey) return;
+  const pastas=M.projs.filter(p=>p.pasta); const falhas=[];
+  await Promise.all(pastas.map(async p=>{
+    try{
+      let fotos=[], token="";
+      do{
+        const q=encodeURIComponent(`'${p.pasta}' in parents and mimeType contains 'image/' and trashed=false`);
+        const url=`https://www.googleapis.com/drive/v3/files?q=${q}&pageSize=1000&fields=nextPageToken,files(id,name,description,createdTime,imageMediaMetadata(time))&key=${CONFIG.driveApiKey}${token?"&pageToken="+token:""}`;
+        const r=await fetch(url); const j=await r.json();
+        if(!r.ok) throw new Error(j.error&&j.error.message||("HTTP "+r.status));
+        fotos=fotos.concat(j.files||[]); token=j.nextPageToken||"";
+      }while(token);
+      DRIVE[p.k]=fotos.map(f=>{ const nome=f.name.replace(/\.[^.]+$/,"");
+        return {src:`https://drive.google.com/file/d/${f.id}/view`, cap:f.description||(GENERICO.test(nome)?"":nome.replace(/[_]+/g," ")), t:quando(f)}; })
+        .sort((a,b)=>a.t-b.t);
+    }catch(e){ falhas.push(p.nome); }
+  }));
+  if(falhas.length) notice(`Não foi possível ler a pasta de fotos de: ${falhas.join(", ")}. Confira se a pasta está compartilhada como “Qualquer pessoa com o link” e se o link na aba Projetos está correto.`);
+}
+function driveDaSemana(p,w){
+  const fim=new Date(w.d.getFullYear(),w.d.getMonth(),w.d.getDate()+1), ini=new Date(fim-7*864e5);
+  return (DRIVE[p.k]||[]).filter(f=>f.t>=ini&&f.t<fim);
 }
 
 /* ---------- Componentes ---------- */
@@ -392,13 +430,18 @@ function chart(p,w,s){
   const path=pts=>pts.map((r,i)=>(i?"L":"M")+X(r.d).toFixed(1)+" "+Y(r.v).toFixed(1)).join(" ");
   if(pv.length) g+=`<path d="${path(pv)}" fill="none" stroke="var(--red)" stroke-width="2"/>`;
   if(rl.length) g+=`<path d="${path(rl)}" fill="none" stroke="var(--curve)" stroke-width="2.4"/>`;
-  if(s.prev!=null){ const yp=Y(s.prev); let yr=rl.length?Y(rl[rl.length-1].v)+16:0; if(rl.length&&yr-(yp-8)<14) yr=yp+10;
-    g+=`<circle cx="${X(w.d)}" cy="${yp}" r="3" fill="var(--red)"/><text class="lbl" x="${X(w.d)}" y="${yp-8}" text-anchor="middle">${fP0(s.prev)}</text>`;
-    if(rl.length){ const lr=rl[rl.length-1]; g+=`<circle cx="${X(lr.d)}" cy="${Y(lr.v)}" r="3" fill="var(--curve)"/><text class="lbl" x="${X(lr.d)+6}" y="${yr}" text-anchor="start">${fP0(s.real)}</text>`; } }
+  if(s.prev!=null){
+    const yp=Y(s.prev), lr=rl.length?rl[rl.length-1]:null, yr=lr?Y(lr.v):null;
+    const inv=lr&&yr<yp;                                 // realizado acima do previsto
+    let lp=inv?yp+16:yp-8, lq=lr?(inv?yr-8:yr+16):null;
+    if(lr && Math.abs(lq-lp)<14){ if(lq<lp) lq=lp-14; else lq=lp+14; }
+    g+=`<circle cx="${X(w.d)}" cy="${yp}" r="3" fill="var(--red)"/><text class="lbl" x="${inv?X(w.d)+6:X(w.d)}" y="${lp}" text-anchor="${inv?"start":"middle"}">${fP0(s.prev)}</text>`;
+    if(lr) g+=`<circle cx="${X(lr.d)}" cy="${yr}" r="3" fill="var(--curve)"/><text class="lbl" x="${X(lr.d)+6}" y="${lq}" text-anchor="start">${fP0(s.real)}</text>`;
+  }
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Curva S: previsto ${fP(s.prev)}, realizado ${fP(s.real)}">${g}</svg>
     <table class="ind"><caption>Indicador de avanço físico (semanal)</caption>
       <tr><td>Previsto</td><td>${fP(s.prev)}</td></tr><tr><td>Realizado</td><td>${fP(s.real)}</td></tr>
-      <tr class="dv"><td>Desvio</td><td>${fD(s.dev)}</td></tr></table>
+      <tr class="dv ${s.dev==null||Math.abs(s.dev)<0.05?"zero":s.dev>0?"pos":""}"><td>Desvio</td><td>${fD(s.dev)}</td></tr></table>
     <div class="key"><span><i style="background:var(--red)"></i>Previsto acumulado</span><span><i style="background:var(--curve)"></i>Realizado acumulado</span></div>`;
 }
 
@@ -424,7 +467,7 @@ function page(p,w,s){
     ${staleNote(s)}
     <div class="cards">
       <div class="card"><h3>Avanço físico</h3><div class="v">${fP0(s.real)}</div><p>previsto: ${fP0(s.prev)}</p></div>
-      <div class="card"><h3>Desvio</h3><div class="v ${s.dev!=null&&s.dev< -0.05?"neg":""}">${fD(s.dev)}</div><p>${esc(s.nota||"Realizado − previsto")}</p></div>
+      <div class="card"><h3>Desvio</h3><div class="v ${s.dev!=null&&s.dev< -0.05?"neg":s.dev>0.05?"pos":""}">${fD(s.dev)}</div><p>${esc(s.nota||"Realizado − previsto")}</p></div>
       <div class="card"><h3>Orçamento</h3><div class="v">${fR(p.orc)}</div><p>Realizado: ${fR(s.orc)}</p></div>
       <div class="card"><h3>Start-up</h3><div class="v">${p.su?mesAno(p.su):esc(p.suRaw||"–")}</div><p>${esc(p.suNota||"")}</p></div>
     </div>
@@ -502,12 +545,13 @@ $("#lb").addEventListener("click",e=>{ if(e.target.id==="lb")$("#lb").close(); }
 document.addEventListener("keydown",e=>{ if(!$("#lb").open)return; if(e.key==="ArrowLeft")openLB(LBi-1); if(e.key==="ArrowRight")openLB(LBi+1); });
 
 (function logo(){ const el=$("#logo"); const fb=()=>{el.innerHTML=`<span class="logo-fallback">Enaex Brasil</span>`;};
-  if(!CONFIG.logo) return fb(); const img=new Image(); img.alt="Enaex Brasil"; img.onerror=fb; img.src=CONFIG.logo; el.appendChild(img); })();
+  if(!CONFIG.logo) return fb(); const img=new Image(); img.alt="Enaex Brasil"; let tried=false;
+  img.onerror=()=>{ if(!tried){ tried=true; img.src=CONFIG.logo+".png"; } else fb(); }; img.src=CONFIG.logo; el.appendChild(img); })();
 
-load().then(({t,demo})=>{
+load().then(async ({t,demo})=>{
   M=model(t);
   if(!M.weeks.length){ $("#app").innerHTML=`<p class="loading">Nenhuma semana lançada. Inclua as linhas da semana na aba Semanal.</p>`; return; }
-  readHash(); render();
+  await carregarDrive(); readHash(); render();
   $("#src").textContent=demo?"Fonte: dados de exemplo":`Fonte: planilha de controle. Carregado em ${new Date().toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})}.`;
 }).catch(e=>{ $("#app").innerHTML=""; notice(`Não foi possível ler a planilha (${e.message}). Confira se ela está compartilhada como "Qualquer pessoa com o link: leitor" e se os nomes das abas não foram alterados.`,true); });
 </script>
