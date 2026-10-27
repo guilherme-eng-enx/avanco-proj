@@ -264,7 +264,7 @@ dialog.lb .ctl button{ background:#fff; border:0; padding:6px 14px; cursor:point
    Enquanto planilhaId estiver vazio, a página mostra dados de exemplo.
    ========================================================= */
 const CONFIG = {
-  planilhaId: "1NSfWGI4W0xSjJqYENBe5PW8qJCmV5_kol2d1Mh-BPtM",
+  planilhaId: "",
   driveApiKey: "",
   github: null,                            // detectado pelo endereço do site; só preencha se precisar: {usuario:"...", repo:"...", branch:"main"}                         // chave de API do Google (Drive) para listar as pastas de fotos
   logo: "logo-enaex.png",                  // arquivo do logo no mesmo repositório
@@ -353,7 +353,7 @@ function model(t){
       su:parseDate(r.start_up),suRaw:r.start_up,suNota:r.nota_do_start_up,
       pasta:((String(r.pasta_de_fotos||"").match(/folders\/([\w-]{10,})/)||String(r.pasta_de_fotos||"").match(/[?&]id=([\w-]{10,})/)||[])[1])||null,
       geral: tp.startsWith("ger") || tp.startsWith("out") || (!tp.startsWith("cur") && !base[k])};});
-  const marcos=by(t["Marcos"].map(r=>({k:key(r.projeto),nome:r.marco,prev:parseDate(r.data_prevista),raw:r.data_prevista,real:parseDate(r.data_realizada)})).filter(r=>r.nome),r=>r.k);
+  const marcos=by(t["Marcos"].map(r=>({k:key(r.projeto),nome:r.marco,prev:parseDate(r.data_prevista),raw:r.data_prevista,real:parseDate(r.data_realizada),sit:r.situacao||""})).filter(r=>r.nome),r=>r.k);
   Object.values(marcos).forEach(a=>a.sort((x,y)=>(x.prev||0)-(y.prev||0)));
   const info={}; t["Semanas"].forEach(r=>{const d=parseDate(r.data_de_corte); if(d) info[dkey(d)]={rev:r.revisao,dest:r.destaque,per:r.periodo};});
   const ks=new Set(Object.keys(info)); Object.values(sem).flat().forEach(r=>ks.add(dkey(r.d)));
@@ -441,14 +441,29 @@ function driveDaSemana(p,w){
 function bar(s,big){ return `<div class="bar${big?" big":""}" style="--c:${ST[s.st].c}" role="img" aria-label="Previsto ${fP(s.prev)}, realizado ${fP(s.real)}"><i style="width:${s.real||0}%"></i>${s.prev!=null?`<s style="left:${s.prev}%"></s>`:""}</div>`; }
 const staleNote=s=>s.stale?`<p class="stale">Sem atualização nesta semana. Valores da última atualização (${dmy(s.stale)}).</p>`:"";
 
+/* Situação manual do marco (coluna Situação da aba Marcos) prevalece sobre a regra automática.
+   Palavras reconhecidas: Concluído | Em andamento | Em atraso/Atrasado | Previsto/Não iniciado.
+   Qualquer outro texto aparece abaixo do marco, mantendo a cor automática. */
+function sitOf(t){ const k=key(t); if(!k) return null;
+  if(k.startsWith("conc")) return "done"; if(k.includes("atras")) return "late";
+  if(k.includes("andamento")||k.startsWith("em_curso")||k.startsWith("em_execu")) return "cur";
+  if(k.startsWith("prev")||k.startsWith("nao_inic")||k.startsWith("futur")||k.startsWith("pendente")) return "fut";
+  return "txt"; }
 function milestones(p,w,s){
   const ms=M.marcos[p.k]||[]; if(!ms.length)return "";
-  const ci=ms.findIndex(m=>!(m.real&&m.real<=w.d));
+  const isDone=m=>{ const st=sitOf(m.sit); return (st&&st!=="txt")?st==="done":!!(m.real&&m.real<=w.d); };
+  const ci=ms.findIndex(m=>!isDone(m));
   return `<div class="miles"><div class="track-m" style="--n:${ms.length}">${ms.map((m,i)=>{
-    let cls="",note="";
-    if(ci<0||i<ci) cls="done";
-    else if(i===ci){ const late=(s.dev!=null&&s.dev< -CONFIG.tolerancia.atencao)||(m.prev&&m.prev<w.d);
-      cls=late?"late":"cur"; note=late?`Em atraso${s.dev<0?" – "+fD(s.dev):""}`:"Em andamento"; }
+    let cls="",note=""; const st=sitOf(m.sit);
+    if(st&&st!=="txt"){
+      cls={done:"done",late:"late",cur:"cur",fut:""}[st];
+      note=(st==="done"&&key(m.sit).startsWith("conclu")&&key(m.sit).length<=9)?"":esc(m.sit);
+    } else {
+      if(ci<0||i<ci) cls="done";
+      else if(i===ci){ const late=(s.dev!=null&&s.dev< -CONFIG.tolerancia.atencao)||(m.prev&&m.prev<w.d);
+        cls=late?"late":"cur"; note=late?`Em atraso${s.dev<0?" – "+fD(s.dev):""}`:"Em andamento"; }
+      if(st==="txt") note=esc(m.sit);
+    }
     return `<div class="m ${cls}"><div class="t">${esc(m.nome)}</div><div class="dot"></div><div class="d">${m.prev?mesAno(m.prev):esc(m.raw||"–")}</div><div class="n">${note}</div></div>`;
   }).join("")}</div></div>`;
 }
